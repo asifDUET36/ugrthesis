@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Green-Belt Microclimate Console — Thesis TalkBack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ LOGIN GATE ============ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <span class="login-eyebrow">Urban Green-Belt Microclimate Research Portal</span>
+    <h1 class="login-title">Restricted Research Console</h1>
+    <p class="login-caution">
+      <strong>Authorized personnel only.</strong> This console is restricted to the supervisor and
+      registered members of this thesis research team. Access is limited to authorized use in
+      connection with the project below; do not share credentials. Unauthorized entry is prohibited.
+    </p>
+    <form id="loginForm" class="login-form" autocomplete="off">
+      <label>Username
+        <input type="text" id="loginUser" name="username" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input type="password" id="loginPass" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="login-error" id="loginError"></p>
+      <button type="submit" class="btn btn-primary login-submit">Enter console</button>
+    </form>
+    <p class="login-footnote">Session stays open until this tab is closed. Reloading the page will not sign you out.</p>
+  </div>
+</div>
+
+<div class="scope-strip" id="scopeStrip">
+  <canvas id="scopeCanvas"></canvas>
+  <div class="scope-label">
+    <span class="dot" id="liveDot"></span>
+    <span id="scopeStatus">connecting…</span>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-eyebrow">ESP32 · ThingSpeak · TalkBack</span>
+    <h1>Thesis TalkBack <span class="accent">Console</span></h1>
+    <p class="brand-sub">Live field readout, statistics and two‑way TalkBack control for research logging.</p>
+  </div>
+  <div class="topbar-actions">
+    <span class="session-tag" id="sessionTag" hidden>Signed in as <b id="sessionUser">—</b></span>
+    <button class="btn btn-ghost icon-btn" id="themeToggle" type="button" title="Switch light / dark" aria-label="Switch light / dark theme">
+      <span id="themeIcon">🌙</span>
+    </button>
+    <button class="btn btn-ghost" id="configToggle" type="button">Connection settings</button>
+    <button class="btn btn-primary" id="refreshNow" type="button">Refresh now</button>
+    <button class="btn btn-ghost" id="logoutBtn" type="button" hidden>Sign out</button>
+  </div>
+</header>
+
+<!-- ============ THESIS / SUPERVISOR META ============ -->
+<section class="thesis-meta">
+  <div class="thesis-meta-title">
+    <span class="thesis-meta-label">Thesis</span>
+    <h2>An Empirical Framework for Microclimatic Regulation in Urban Green-Belts: A Data-Driven Approach for Tropical Climates</h2>
+  </div>
+  <div class="thesis-meta-grid">
+    <div class="thesis-meta-block">
+      <span class="thesis-meta-label">Under the supervision of</span>
+      <p class="thesis-person">Md. Mahmudur Rahman</p>
+      <p class="thesis-role">Professor, Department of Electrical and Electronic Engineering</p>
+    </div>
+    <div class="thesis-meta-block">
+      <span class="thesis-meta-label">Thesis students</span>
+      <p class="thesis-person">Md Asif Bin Sayed <span class="thesis-id">ID: 212063</span></p>
+      <p class="thesis-person">Pingki Rani <span class="thesis-id">ID: 212061</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="config-panel" id="configPanel" hidden>
+  <div class="config-grid">
+    <label>Channel ID
+      <input type="text" id="cfgChannelId" placeholder="3465093">
+    </label>
+    <label>Read API Key
+      <input type="text" id="cfgReadKey" placeholder="8LU7OMUK7B6VFWJG">
+    </label>
+    <label>Write API Key <span class="muted-inline">(optional, for posting from this page)</span>
+      <input type="text" id="cfgWriteKey" placeholder="0KGGB9EFXMAAKKQX">
+    </label>
+    <label>TalkBack ID
+      <input type="text" id="cfgTalkbackId" placeholder="57615">
+    </label>
+    <label>TalkBack API Key
+      <input type="text" id="cfgTalkbackKey" placeholder="V8GH0JVA5AF06PR6">
+    </label>
+    <label>Auto-refresh interval
+      <select id="cfgInterval">
+        <option value="5000">5 seconds</option>
+        <option value="10000" selected>10 seconds</option>
+        <option value="15000">15 seconds</option>
+        <option value="30000">30 seconds</option>
+        <option value="0">Off</option>
+      </select>
+    </label>
+    <label>Results per fetch
+      <select id="cfgResults">
+        <option value="60">Last 60 points</option>
+        <option value="100" selected>Last 100 points</option>
+        <option value="200">Last 200 points</option>
+        <option value="500">Last 500 points</option>
+        <option value="1" data-days>Last 1 day</option>
+      </select>
+    </label>
+    <label>Treat station as offline after
+      <select id="cfgStaleMinutes">
+        <option value="5">5 minutes of silence</option>
+        <option value="10" selected>10 minutes of silence</option>
+        <option value="20">20 minutes of silence</option>
+        <option value="60">60 minutes of silence</option>
+      </select>
+    </label>
+  </div>
+  <div class="config-actions">
+    <button class="btn btn-primary" id="saveConfig" type="button">Save &amp; connect</button>
+    <span class="config-note">Stored only in this browser (localStorage). Nothing leaves your machine except direct calls to ThingSpeak.</span>
+  </div>
+</section>
+
+<main>
+
+  <!-- NO-DATA / TROUBLESHOOTING BANNER (shown across visual sections when the station goes quiet) -->
+  <template id="noDataBannerTemplate">
+    <div class="no-data-banner">
+      <span class="no-data-icon">⚠</span>
+      <div>
+        <strong>Asif, no data is coming from the Sending Station — needs troubleshooting.</strong>
+        <p>The ESP32 hasn't reported a fresh reading recently. Check power, Wi-Fi, and the ThingSpeak write key on the device.</p>
+      </div>
+    </div>
+  </template>
+
+  <!-- VISUALIZATION — priority section, shown first -->
+  <section class="panel" id="chartSection">
+    <div class="panel-head">
+      <h2>Visualization</h2>
+      <div class="chart-controls">
+        <div class="seg" id="chartTypeSeg">
+          <button data-type="line" class="seg-btn active">Line</button>
+          <button data-type="scatter" class="seg-btn">Scatter</button>
+          <button data-type="bar" class="seg-btn">Bar</button>
+          <button data-type="histogram" class="seg-btn">Histogram</button>
+          <button data-type="boxplot" class="seg-btn">Box plot</button>
+          <button data-type="heatmap" class="seg-btn">Correlation</button>
+        </div>
+      </div>
+    </div>
+    <div class="chart-subrow">
+      <div class="field-toggle" id="fieldToggle"></div>
+      <label class="stat-overlay-toggle">
+        <input type="checkbox" id="statOverlayToggle">
+        Show statistical overlay (mean / ±1σ band)
+      </label>
+    </div>
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="mainChart"></canvas>
+      <div id="heatmapWrap" class="heatmap-wrap" hidden></div>
+      <div class="no-data-slot" id="chartNoData"></div>
+    </div>
+    <p class="panel-hint" id="lastUpdated">—</p>
+  </section>
+
+  <!-- FIELD STATISTICS — comes after visualization -->
+  <section class="panel" id="statsSection">
+    <div class="panel-head">
+      <h2>Field statistics</h2>
+      <span class="panel-hint">Descriptive &amp; research-grade statistics per field</span>
+    </div>
+    <div class="stats-grid" id="statsGrid">
+      <p class="empty-state">Waiting for first fetch…</p>
+    </div>
+    <div class="no-data-slot" id="statsNoData"></div>
+
+    <div class="corr-block" id="corrBlock" hidden>
+      <h3>Pairwise correlation (Pearson r)</h3>
+      <div class="table-scroll">
+        <table id="corrTable"><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TALKBACK -->
+  <section class="panel" id="talkbackSection">
+    <div class="panel-head">
+      <h2>TalkBack console</h2>
+      <span class="panel-hint">Queue commands for the ESP32 to pull on its next check-in</span>
+    </div>
+    <div class="talkback-grid">
+      <div class="talkback-send">
+        <label for="tbCommand">Command string</label>
+        <div class="tb-input-row">
+          <input type="text" id="tbCommand" placeholder="e.g. LED_ON, SAMPLE_RATE=5">
+          <button class="btn btn-accent" id="tbSend" type="button">Queue command</button>
+        </div>
+        <p class="tb-feedback" id="tbFeedback"></p>
+      </div>
+      <div class="talkback-status">
+        <div class="tb-stat">
+          <span class="tb-stat-label">Last executed</span>
+          <span class="tb-stat-value" id="tbLastExecuted">—</span>
+        </div>
+        <div class="tb-stat">
+          <span class="tb-stat-label">Queue length</span>
+          <span class="tb-stat-value" id="tbQueueLength">—</span>
+        </div>
+        <button class="btn btn-ghost" id="tbRefresh" type="button">Check TalkBack now</button>
+      </div>
+    </div>
+    <div class="tb-log">
+      <h3>Command history (this session)</h3>
+      <ul id="tbLogList" class="tb-log-list"><li class="empty-state">No commands sent yet.</li></ul>
+    </div>
+  </section>
+
+  <!-- DATA TABLE -->
+  <section class="panel" id="tableSection">
+    <div class="panel-head">
+      <h2>Raw dataset</h2>
+      <div class="table-actions">
+        <button class="btn btn-primary" id="downloadCsv" type="button">Download dataset (CSV)</button>
+        <button class="btn btn-ghost" id="downloadJson" type="button">Download JSON</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead><tr id="tableHead"></tr></thead>
+        <tbody id="tableBody"><tr><td class="empty-state">No data yet.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="no-data-slot" id="tableNoData"></div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-line">Thesis TalkBack Console · Channel #<span id="footChannelId">—</span> · Built for independent research use.</div>
+  <div class="footer-line footer-dev">
+    Developed by
+    <a href="https://asifduet36.github.io/asifbinsayed/" target="_blank" rel="noopener noreferrer" class="dev-link">Md Asif Bin Sayed — EEE 36th, 21 Series, Dhaka University of Engineering and Technology</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
