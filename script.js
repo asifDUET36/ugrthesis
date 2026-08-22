@@ -28,7 +28,7 @@ const SESSION_KEY = 'thesisTalkbackAuthUser';
    not a real security boundary. Anyone who views the page source can read these
    credentials, so this is not a substitute for server-side authentication. */
 const CREDENTIALS = {
-  'm.rahman':  { password: 'Supervisor',    label: 'Md. Mahmudur Rahman (Supervisor)' },
+  'm.rahman':  { password: 'supervisor',    label: 'Md. Mahmudur Rahman (Supervisor)' },
   'abs':       { password: 'ugr_thesis_abs', label: 'Md Asif Bin Sayed (Thesis Student)' },
   'p.debnath': { password: 'ugr_thesis_prc', label: 'Pingki Rani (Thesis Student)' }
 };
